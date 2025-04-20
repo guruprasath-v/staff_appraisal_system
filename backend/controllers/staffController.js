@@ -1,5 +1,22 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
+const Subtask = require("../models/subtaskModel");
+
+const getRankings = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const rankings = await User.getRankings(page, limit);
+
+    res.status(200).json({
+      success: true,
+      data: rankings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const registerStaff = async (req, res, next) => {
   try {
@@ -37,8 +54,37 @@ const registerStaff = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  registerStaff,
+const getAssignedSubtasks = async (req, res, next) => {
+  try {
+    const staffId = req.user.id;
+    const subtasks = await Subtask.getByStaffId(staffId);
+
+    res.status(200).json({
+      success: true,
+      data: subtasks,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
+const updateSubtaskStatus = async (req, res, next) => {
+  try {
+    const { stid } = req.params;
+    await Subtask.updateToReviewStatus(stid);
 
+    res.status(200).json({
+      success: true,
+      message: "Subtask status updated to review",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  registerStaff,
+  getAssignedSubtasks,
+  updateSubtaskStatus,
+  getRankings,
+};

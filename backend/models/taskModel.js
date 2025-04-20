@@ -2,6 +2,16 @@ const db = require("../configs/db");
 const { v4: uuidv4 } = require("uuid");
 
 class Task {
+  static async getTaskDueDate(taskId) {
+    const query = `
+      SELECT duedate
+      FROM tasks
+      WHERE id = ?
+    `;
+    const [[task]] = await db.query(query, [taskId]);
+    return task ? task.duedate : null;
+  }
+
   static async create({ name, description, due_date, department_id }) {
     const id = uuidv4();
     const query = `
@@ -47,6 +57,16 @@ class Task {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  static async updateSubTaskCount(taskId, increment = 1) {
+    const query = `UPDATE tasks SET sub_task_count = sub_task_count + ? WHERE id = ?`;
+    await db.query(query, [increment, taskId]);
+  }
+
+  static async updatePendingSubtasksCount(taskId, increment = 1) {
+    const query = `UPDATE tasks SET pending_subtasks_count = pending_subtasks_count + ? WHERE id = ?`;
+    await db.query(query, [increment, taskId]);
   }
 }
 

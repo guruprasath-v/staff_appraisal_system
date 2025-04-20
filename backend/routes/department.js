@@ -4,7 +4,11 @@ const {
   createTask,
   getDptTasks,
 } = require("../controllers/departmentController");
-const { createSubtask } = require("../controllers/subtaskController");
+const {
+  createSubtask,
+  getSubtasks,
+  updateSubtaskStatus,
+} = require("../controllers/subtaskController");
 const isHOD = require("../middlewares/isHOD");
 const { auth } = require("../middlewares/auth");
 
@@ -15,5 +19,7 @@ router.get("/tasks", auth, isHOD, getDptTasks);
 
 // Subtask routes
 router.post("/stask/:pid", auth, isHOD, createSubtask);
+router.get("/stask", auth, isHOD, getSubtasks);
+router.put("/stask/:stid", auth, isHOD, updateSubtaskStatus);
 
 module.exports = router;
