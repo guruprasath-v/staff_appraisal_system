@@ -11,16 +11,15 @@ const login = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Invalid Username",
       });
     }
-
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Invalid Password",
       });
     }
 
@@ -30,6 +29,7 @@ const login = async (req, res, next) => {
         id: user.id,
         email: user.email,
         role: user.role,
+        department_id: user.dpt,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
@@ -43,6 +43,7 @@ const login = async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        department_id: user.dpt,
       },
     });
   } catch (error) {
