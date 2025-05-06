@@ -1,0 +1,39 @@
+DB: sas_system
+Tables: 
+ - departments: id          | varchar(200) | PK NN
+                name        | varchar(255) | NN
+                staff_count | INT | default=0
+
+- users: id | varchar(100) | PK | NN
+         name | varchar(255) | NN
+         email | varchar(255) | NN | UQ
+         mob | varchar(20)
+         password | varchar(100) | NN
+         overall_efficiency | decimal(5, 2) | default=0.00
+         tasks_completed_count | int | default=0
+         pending_count | int | 0
+         role | enum('admin', 'HOD', 'staff') | NN
+         dpt | varchar(100) FK->departments(id) | default=null
+         workload | int | default=0
+         user-rank | int | default=0
+
+- tasks: id | varchar(200) | pk | NN
+         name | varchar(255) | NN
+         description | text | default=null
+         status | enum('pending', 'completed') | default='pending'
+         sub_task_count | int | default=0
+         pending_subtasks_count | int | default=0
+         duedate | timestamp | default=null
+         department_id | varchar(200) FK->departments(id) | default=null
+
+- sub_tasks: id | varchar(200) | pk | NN 
+             name | varchar(255) | NN
+             description | text | default=null
+             priority | enum('low', 'medium', 'high') || nn || default='pending'
+             status | enum('pending', 'review', 'rework', 'completed') | nn | default='pending'
+             parent_task_id | varchar(200) FK->tasks(id) | default=null
+             assigned_employee | varchar(200) FK->users(id) | default=null
+             rework_count | int | default=0
+             efficiency | decimal(5, 2) | default=0.00
+             due_date | date | default=null
+             department_id | varchar(200) FK-> departments(id) | default=null

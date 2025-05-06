@@ -8,9 +8,10 @@ const {
 } = require("../controllers/staffController");
 const { auth, isAdmin } = require("../middlewares/auth");
 const { isStaff } = require("../middlewares/isStaff");
+const isHOD = require("../middlewares/isHOD");
 
-// Protected routes (Admin only)
-router.post("/", auth, isAdmin, registerStaff);
+// Protected routes (Admin only for rankings, HOD for user creation)
+router.post("/", auth, isHOD, registerStaff);
 router.get("/rankings", auth, isAdmin, getRankings);
 
 // Protected routes (Staff only)

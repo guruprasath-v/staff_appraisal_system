@@ -34,7 +34,8 @@ class Task {
         duedate,
         created_at,
         status,
-        sub_task_count
+        sub_task_count,
+        pending_subtasks_count
       FROM tasks
       WHERE department_id = ?
       ORDER BY created_at DESC
@@ -67,6 +68,25 @@ class Task {
   static async updatePendingSubtasksCount(taskId, increment = 1) {
     const query = `UPDATE tasks SET pending_subtasks_count = pending_subtasks_count + ? WHERE id = ?`;
     await db.query(query, [increment, taskId]);
+  }
+
+  static async findById(taskId) {
+    const query = `
+      SELECT 
+        id,
+        name,
+        description,
+        duedate as due_date,
+        created_at,
+        status,
+        sub_task_count,
+        pending_subtasks_count,
+        department_id
+      FROM tasks
+      WHERE id = ?
+    `;
+    const [[task]] = await db.query(query, [taskId]);
+    return task;
   }
 }
 

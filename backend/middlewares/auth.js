@@ -3,7 +3,13 @@ const { promisify } = require("util");
 
 const auth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    // Check for token in Authorization header
+    let token = req.headers.authorization?.split(" ")[1];
+
+    // If no token in header, check cookies
+    if (!token && req.cookies) {
+      token = req.cookies.ssid;
+    }
 
     if (!token) {
       return res.status(401).json({

@@ -35,6 +35,14 @@ const login = async (req, res, next) => {
       { expiresIn: "24h" }
     );
 
+    // Set JWT token as HTTP-only cookie
+    res.cookie("ssid", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+
     res.json({
       success: true,
       token,

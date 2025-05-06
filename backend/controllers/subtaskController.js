@@ -98,6 +98,16 @@ const getSubtasks = async (req, res, next) => {
   }
 };
 
+const getSubtasksByParentTaskId = async (req, res, next) => {
+  try {
+    const { ptid } = req.params;
+    const subtasks = await Subtask.findByParentTaskId(ptid);
+    res.status(200).json({ success: true, data: subtasks });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const updateSubtaskStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -117,40 +127,94 @@ const updateSubtaskStatus = async (req, res, next) => {
         message: "Subtask status updated to rework successfully",
       });
     }
-    const quality_of_work = req.body.quality_of_work;
+
     // Handle completion status
-    if (!quality_of_work || quality_of_work < 1 || quality_of_work > 10) {
+    const quality_of_work = req.body.quality_of_work;
+    if (!quality_of_work) {
       return res.status(400).json({
         success: false,
-        message: "Quality of work must be provided and be between 1 and 10",
+        message: "Quality of work must be provided",
+      });
+    }
+
+    // Validate quality of work value
+    const validQualityRatings = [
+      "excellent",
+      "good",
+      "satisfactory",
+      "needs improvement",
+    ];
+    if (!validQualityRatings.includes(quality_of_work.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid quality of work rating. Must be one of: excellent, good, satisfactory, needs improvement",
       });
     }
 
     // Get necessary data for efficiency calculation
     const subtaskDetails = await Subtask.getSubtaskDetails(subtaskId);
-    console.log(subtaskDetails.assigned_employee);
+    if (!subtaskDetails) {
+      return res.status(404).json({
+        success: false,
+        message: "Subtask not found",
+      });
+    }
+
     const assigned_employee = subtaskDetails.assigned_employee;
+    if (!assigned_employee) {
+      return res.status(400).json({
+        success: false,
+        message: "No employee assigned to this subtask",
+      });
+    }
 
     const userMetrics = await User.getUserMetrics(assigned_employee);
+    if (!userMetrics) {
+      return res.status(404).json({
+        success: false,
+        message: "User metrics not found",
+      });
+    }
 
     // Calculate efficiency for this task
     const efficiency = calculateEfficiency({
       qualityOfWork: quality_of_work,
       createdDate: subtaskDetails.created_at,
-      workload: userMetrics.workload,
-      pendingTasks: userMetrics.pending_count,
-      reworkCount: subtaskDetails.rework_count,
+      workload: userMetrics.workload || 0,
+      pendingTasks: userMetrics.pending_count || 0,
+      reworkCount: subtaskDetails.rework_count || 0,
+      tasksCompletedCount: userMetrics.tasks_completed_count || 0,
     });
+
+    // Validate efficiency calculation
+    if (isNaN(efficiency) || efficiency < 0 || efficiency > 100) {
+      return res.status(500).json({
+        success: false,
+        message: "Error calculating efficiency score",
+      });
+    }
 
     // Calculate new overall efficiency
     const newOverallEfficiency = calculateOverallEfficiency(
       efficiency,
-      userMetrics.tasks_completed_count + 1,
-      userMetrics.overall_efficiency
+      (userMetrics.tasks_completed_count || 0) + 1,
+      userMetrics.overall_efficiency || 0
     );
 
-    console.log(newOverallEfficiency);
+    // Validate overall efficiency calculation
+    if (
+      isNaN(newOverallEfficiency) ||
+      newOverallEfficiency < 0 ||
+      newOverallEfficiency > 100
+    ) {
+      return res.status(500).json({
+        success: false,
+        message: "Error calculating overall efficiency score",
+      });
+    }
 
+    await Task.updatePendingSubtasksCount(subtaskDetails.parent_task_id, -1);
     // Update subtask status and efficiency
     await Subtask.updateCompletionStatus(subtaskId, efficiency);
 
@@ -160,15 +224,12 @@ const updateSubtaskStatus = async (req, res, next) => {
       newOverallEfficiency
     );
 
-    // Update task's pending subtasks count
-    await Task.updatePendingSubtasksCount(subtaskId, -1);
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Subtask marked as completed successfully",
+      message: "Subtask completed successfully",
       data: {
         efficiency,
-        overall_efficiency: newOverallEfficiency,
+        overallEfficiency: newOverallEfficiency,
       },
     });
   } catch (error) {
@@ -180,4 +241,5 @@ module.exports = {
   createSubtask,
   getSubtasks,
   updateSubtaskStatus,
+  getSubtasksByParentTaskId,
 };

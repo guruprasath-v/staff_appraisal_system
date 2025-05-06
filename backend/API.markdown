@@ -342,6 +342,82 @@ GET /api/dpt/stask
 
 Retrieves all subtasks for the HOD's department with pagination support.
 
+### Get Subtasks by Parent Task ID (HOD Only)
+
+```http
+GET /api/dpt/stask/:ptid
+```
+
+Retrieves all subtasks associated with a specific parent task ID.
+
+#### Parameters
+
+- `ptid`: Parent Task ID (string, required)
+
+#### Headers
+
+- Authorization: Bearer {token}
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "priority": "string",
+      "status": "string",
+      "assigned_employee": "string",
+      "employee_name": "string",
+      "employee_email": "string",
+      "due_date": "string",
+      "created_at": "string"
+    }
+  ]
+}
+```
+
+### Get Department Review Subtasks (HOD Only)
+
+```http
+GET /api/dpt/dpt/stask
+```
+
+Retrieves subtasks with 'review' status for the HOD's department, ordered by updated_at in ascending order.
+
+#### Authentication
+
+Requires a valid JWT token and HOD role.
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "string",
+      "title": "string",
+      "description": "string",
+      "status": "review",
+      "assignedTo": "string",
+      "parentTask": "string",
+      "createdAt": "string",
+      "updatedAt": "string"
+    }
+  ]
+}
+```
+
+#### Error Responses
+
+- 401: Unauthorized - Invalid or missing token
+- 403: Forbidden - User is not an HOD
+- 500: Internal Server Error
+
 ### Update Subtask Status (HOD Only)
 
 ```http

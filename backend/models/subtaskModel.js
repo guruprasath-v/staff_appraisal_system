@@ -26,7 +26,7 @@ class Subtask {
 
   static async getSubtaskDetails(subtaskId) {
     const query = `
-      SELECT created_at, rework_count, assigned_employee, status
+      SELECT created_at, rework_count, assigned_employee, status, parent_task_id
       FROM sub_tasks
       WHERE id = ?
     `;
@@ -35,6 +35,7 @@ class Subtask {
   }
 
   static async updateCompletionStatus(subtaskId, efficiency) {
+    console.log(subtaskId, efficiency);
     const query = `
       UPDATE sub_tasks
       SET status = 'completed',
@@ -136,6 +137,19 @@ class Subtask {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  static async findByParentTaskId(parent_task_id) {
+    const query = `
+      SELECT s.*, t.name as task_name, u.name as employee_name, u.email as employee_email
+      FROM sub_tasks s
+      LEFT JOIN tasks t ON s.parent_task_id = t.id
+      LEFT JOIN users u ON s.assigned_employee = u.id
+      WHERE s.parent_task_id = ?
+      ORDER BY s.updated_at ASC
+    `;
+    const [subtasks] = await db.query(query, [parent_task_id]);
+    return subtasks;
   }
 }
 
