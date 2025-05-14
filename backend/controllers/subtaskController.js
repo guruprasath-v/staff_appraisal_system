@@ -1,6 +1,8 @@
 const Subtask = require("../models/subtaskModel");
 const Task = require("../models/taskModel");
 const User = require("../models/userModel");
+const Notification = require("../models/notificationModel");
+const { sendEmail } = require("../utils/emailService");
 
 const { formatDateToMySQL } = require("../utils/dateUtils");
 const {
@@ -10,72 +12,70 @@ const {
 
 const createSubtask = async (req, res, next) => {
   try {
-    const { name, description, priority, assigned_employee, due_date } =
-      req.body;
-    const parent_task_id = req.params.pid; // Get parent task ID from route parameter
-    const department_id = req.user.department_id; // Get department ID from JWT token
+    const { name, description, priority, assigned_employees, due_date } = req.body;
+    const { taskId } = req.params;
 
     // Validate required fields
-    if (!name || !description || !priority || !assigned_employee || !due_date) {
+    if (!name || !priority || !assigned_employees || !Array.isArray(assigned_employees) || assigned_employees.length === 0) {
       return res.status(400).json({
         success: false,
-        message:
-          "Please provide all required fields: name, description, priority, assigned_employee, due_date",
+        message: "Please provide all required fields: name, priority, and at least one assigned employee"
       });
     }
 
-    // Get parent task's due date
-    const parentTaskDueDate = await Task.getTaskDueDate(parent_task_id);
-    if (!parentTaskDueDate) {
-      return res.status(404).json({
-        success: false,
-        message: "Parent task not found",
+    // Create subtasks for each assigned employee
+    const subtasks = [];
+    for (const employeeId of assigned_employees) {
+      const subtask = await Subtask.create({
+        name,
+        description,
+        priority,
+        status: 'pending',
+        parent_task_id: taskId,
+        assigned_employee: employeeId,
+        due_date,
+        department_id: req.user.department_id
       });
+
+      // Update counts for the assigned employee
+      await User.updatePendingCount(employeeId);
+
+      // Send email notification to the assigned user
+      const user = await User.findById(employeeId);
+      if (user && user.email) {
+        try {
+          const task = await Task.findById(taskId);
+          const taskName = task ? task.name : 'Unknown Task';
+          await sendEmail(
+            user.email,
+            'subtaskAssigned',
+            [name, taskName, due_date]
+          );
+        } catch (error) {
+          console.error("Error sending email:", error);
+        }
+      }
+
+      // Create in-app notification
+      await Notification.create({
+        userId: employeeId,
+        message: `You have been assigned a new subtask: ${name}`,
+        type: "task_assignment"
+      });
+
+      subtasks.push(subtask);
     }
 
-    // Format the due dates
-    const formattedDueDate = formatDateToMySQL(due_date);
-    const formattedMaxDueDate = formatDateToMySQL(parentTaskDueDate);
-
-    // Validate subtask due date against parent task due date
-    if (new Date(formattedDueDate) > new Date(formattedMaxDueDate)) {
-      return res.status(400).json({
-        success: false,
-        message: "Subtask due date cannot be later than parent task due date",
-      });
-    }
-
-    // Create new subtask
-    const subtask = await Subtask.create({
-      name,
-      description,
-      priority,
-      parent_task_id,
-      assigned_employee,
-      due_date: formattedDueDate,
-      max_due_date: formattedMaxDueDate,
-      department_id,
-    });
-
-    // Update pending_count for assigned employee
-    await User.updatePendingCount(assigned_employee);
-
-    // Update sub_task_count and pending_subtasks_count for parent task
-    await Task.updateSubTaskCount(parent_task_id);
-    await Task.updatePendingSubtasksCount(parent_task_id);
+    // Update parent task counts
+    await Task.updateSubTaskCount(taskId);
+    await Task.updatePendingSubtasksCount(taskId);
 
     res.status(201).json({
       success: true,
-      message: "Subtask created successfully",
-      data: subtask,
+      message: "Subtasks created successfully",
+      data: subtasks
     });
   } catch (error) {
-    if (error.message.includes("Date conversion error")) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid date format. Please provide a valid date",
-      });
-    }
     next(error);
   }
 };
@@ -223,6 +223,13 @@ const updateSubtaskStatus = async (req, res, next) => {
       assigned_employee,
       newOverallEfficiency
     );
+
+    // Create notification for assigned employee
+    await Notification.create({
+      userId: assigned_employee,
+      message: `Your subtask status has been updated to: ${status}`,
+      type: "subtask_status_updated"
+    });
 
     return res.status(200).json({
       success: true,

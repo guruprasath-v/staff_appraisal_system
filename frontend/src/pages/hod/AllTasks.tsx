@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDepartmentTasks } from "@/lib/api";
+import { getDepartmentTasks, createSubtask, getDepartmentStaff } from "@/lib/api";
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -11,9 +11,77 @@ import {
   ClipboardList,
   CheckCircle,
   AlertCircle,
+  Plus,
+  Users,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
+// Validation schema for subtask
+const createSubtaskSchema = z.object({
+  name: z
+    .string()
+    .min(3, { message: "Subtask name must be at least 3 characters" }),
+  description: z
+    .string()
+    .min(10, { message: "Description must be at least 10 characters" }),
+  priority: z.string().min(1, { message: "Please select a priority" }),
+  assigned_employees: z.array(z.string()).min(1, { message: "Please select at least one employee" }),
+  due_date: z.string().refine(
+    (date) => {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate >= today;
+    },
+    { message: "Due date cannot be in the past" }
+  ),
+});
+
+type CreateSubtaskFormValues = z.infer<typeof createSubtaskSchema>;
 
 const AllTasks = () => {
   const navigate = useNavigate();
@@ -26,22 +94,51 @@ const AllTasks = () => {
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [departmentStaff, setDepartmentStaff] = useState([]);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+
+  // Initialize form
+  const form = useForm<CreateSubtaskFormValues>({
+    resolver: zodResolver(createSubtaskSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      priority: "",
+      assigned_employees: [],
+      due_date: new Date().toISOString().split("T")[0],
+    },
+  });
 
   useEffect(() => {
     fetchTasks(1);
+    fetchDepartmentStaff();
   }, []);
+
+  const fetchDepartmentStaff = async () => {
+    try {
+      const response = await getDepartmentStaff();
+      if (response.success) {
+        setDepartmentStaff(response.data);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch department staff");
+      console.error("Error fetching department staff:", error);
+    }
+  };
 
   const fetchTasks = async (page: number) => {
     try {
       setLoading(true);
       const response = await getDepartmentTasks(page, pagination.limit);
       if (response.success) {
-        console.log(response.data);
         // Calculate progress based on pending_subtasks_count
         const tasksWithProgress = response.data.map((task: any) => {
           const totalSubtasks = task.sub_task_count || 0;
           const pendingSubtasks = task.pending_subtasks_count || 0;
-          console.log(totalSubtasks, pendingSubtasks);
           const completedSubtasks = totalSubtasks - pendingSubtasks;
           const progress =
             totalSubtasks > 0
@@ -67,6 +164,27 @@ const AllTasks = () => {
       console.error("Error fetching tasks:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onSubmit = async (data: CreateSubtaskFormValues) => {
+    if (!selectedTask) return;
+
+    try {
+      setIsCreatingSubtask(true);
+      const response = await createSubtask(selectedTask.id, data as any);
+      if (response.success) {
+        toast.success("Subtask created successfully!");
+        setDialogOpen(false);
+        form.reset();
+        fetchTasks(pagination.page); // Refresh tasks list
+      } else {
+        toast.error(response.message || "Failed to create subtask");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to create subtask");
+    } finally {
+      setIsCreatingSubtask(false);
     }
   };
 
@@ -222,7 +340,7 @@ const AllTasks = () => {
                     creating a new task
                   </p>
                   <Button
-                    onClick={() => navigate("/hod/`create`-task")}
+                    onClick={() => navigate("/hod/create-task")}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                   >
                     Create New Task
@@ -231,42 +349,269 @@ const AllTasks = () => {
               ) : (
                 filteredTasks.map((task) => {
                   const daysRemaining = getDaysRemaining(task.due_date);
-                  const status = getStatusInfo(task.progress);
+                  const statusInfo = getStatusInfo(task.progress);
 
                   return (
                     <motion.div
                       key={task.id}
                       variants={item}
-                      className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
+                      className="bg-white rounded-xl shadow-sm overflow-hidden"
                     >
-                      <div
-                        className="p-6 cursor-pointer"
-                        onClick={() => navigate(`/hod/tasks/${task.id}`)}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-                          <div className="flex items-center mb-2 sm:mb-0">
-                            <div className="flex items-center">
-                              {status.icon}
-                              <h3 className="text-lg font-semibold ml-2 text-gray-800">
-                                {task.name}
-                              </h3>
-                            </div>
-                            <span className={`text-sm ml-3 ${status.color}`}>
-                              {status.text}
-                            </span>
+                      <div className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                              {task.name}
+                            </h3>
+                            <p className="text-gray-500 text-sm mb-4">
+                              {task.description}
+                            </p>
                           </div>
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              <span>{formatDate(task.due_date)}</span>
-                            </div>
-                            <Badge daysRemaining={daysRemaining} />
+                          <div className="flex items-center gap-2">
+                            <Dialog open={dialogOpen && selectedTask?.id === task.id} onOpenChange={(open) => {
+                              setDialogOpen(open);
+                              if (!open) {
+                                setSelectedTask(null);
+                                form.reset();
+                              }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedTask(task)}
+                                  disabled={task.status === 'completed'}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Add Subtask
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[500px]">
+                                <DialogHeader>
+                                  <DialogTitle>Create New Subtask</DialogTitle>
+                                  <DialogDescription>
+                                    Add a new subtask to "{task.name}"
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <Form {...form}>
+                                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                    <FormField
+                                      control={form.control}
+                                      name="name"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Subtask Name</FormLabel>
+                                          <FormControl>
+                                            <Input placeholder="Implement login API" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name="description"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Description</FormLabel>
+                                          <FormControl>
+                                            <Textarea
+                                              placeholder="Add a detailed description of the subtask..."
+                                              className="min-h-[100px]"
+                                              {...field}
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name="priority"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Priority</FormLabel>
+                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Select priority" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              <SelectItem value="low">Low</SelectItem>
+                                              <SelectItem value="medium">Medium</SelectItem>
+                                              <SelectItem value="high">High</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name="assigned_employees"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                          <FormLabel>Assign to Staff</FormLabel>
+                                          <Popover open={open} onOpenChange={setOpen}>
+                                            <PopoverTrigger asChild>
+                                              <FormControl>
+                                                <Button
+                                                  variant="outline"
+                                                  role="combobox"
+                                                  aria-expanded={open}
+                                                  className="justify-between"
+                                                >
+                                                  {field.value.length > 0
+                                                    ? `${field.value.length} staff selected`
+                                                    : "Select staff..."}
+                                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                              </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-full p-0">
+                                              <Command>
+                                                <CommandInput placeholder="Search staff..." />
+                                                <CommandEmpty>No staff found.</CommandEmpty>
+                                                <CommandGroup>
+                                                  {departmentStaff.map((staff: any) => (
+                                                    <CommandItem
+                                                      key={staff.id}
+                                                      onSelect={() => {
+                                                        const newValue = field.value.includes(staff.id)
+                                                          ? field.value.filter((id) => id !== staff.id)
+                                                          : [...field.value, staff.id];
+                                                        field.onChange(newValue);
+                                                        setSelectedEmployees(newValue);
+                                                      }}
+                                                    >
+                                                      <Check
+                                                        className={cn(
+                                                          "mr-2 h-4 w-4",
+                                                          field.value.includes(staff.id)
+                                                            ? "opacity-100"
+                                                            : "opacity-0"
+                                                        )}
+                                                      />
+                                                      {staff.name}
+                                                    </CommandItem>
+                                                  ))}
+                                                </CommandGroup>
+                                              </Command>
+                                            </PopoverContent>
+                                          </Popover>
+                                          <div className="flex flex-wrap gap-2 mt-2">
+                                            {selectedEmployees.map((employeeId) => {
+                                              const staff = departmentStaff.find((s: any) => s.id === employeeId);
+                                              return staff ? (
+                                                <Badge
+                                                  key={employeeId}
+                                                  variant="secondary"
+                                                  className="flex items-center gap-1"
+                                                >
+                                                  <Users className="h-3 w-3" />
+                                                  {staff.name}
+                                                </Badge>
+                                              ) : null;
+                                            })}
+                                          </div>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name="due_date"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Due Date</FormLabel>
+                                          <FormControl>
+                                            <Input type="date" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <DialogFooter className="pt-4">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setDialogOpen(false)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        type="submit"
+                                        disabled={isCreatingSubtask}
+                                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                      >
+                                        {isCreatingSubtask ? (
+                                          <div className="flex items-center">
+                                            <span className="animate-spin mr-2">
+                                              <svg className="h-5 w-5" viewBox="0 0 24 24">
+                                                <circle
+                                                  className="opacity-25"
+                                                  cx="12"
+                                                  cy="12"
+                                                  r="10"
+                                                  stroke="currentColor"
+                                                  strokeWidth="4"
+                                                ></circle>
+                                                <path
+                                                  className="opacity-75"
+                                                  fill="currentColor"
+                                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                ></path>
+                                              </svg>
+                                            </span>
+                                            Creating...
+                                          </div>
+                                        ) : (
+                                          "Create Subtask"
+                                        )}
+                                      </Button>
+                                    </DialogFooter>
+                                  </form>
+                                </Form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/hod/task/${task.id}`)}
+                              className="flex items-center gap-2"
+                            >
+                              View Details
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
 
-                        <p className="text-gray-600 mb-4 line-clamp-2">
-                          {task.description}
-                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              Due: {formatDate(task.due_date)} (
+                              {daysRemaining > 0
+                                ? `${daysRemaining} days left`
+                                : "Overdue"}
+                              )
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {statusInfo.icon}
+                            <span className={statusInfo.color}>
+                              {statusInfo.text}
+                            </span>
+                          </div>
+                          <Badge daysRemaining={daysRemaining} />
+                        </div>
 
                         <div className="mt-4">
                           <div className="flex justify-between items-center mb-2">
@@ -292,20 +637,6 @@ const AllTasks = () => {
                             <span>{task.pendingSubtasks} pending</span>
                             <span>{task.totalSubtasks} total</span>
                           </div>
-                        </div>
-
-                        <div className="mt-6 flex justify-end">
-                          <Button
-                            variant="ghost"
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 -mr-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/hod/tasks/${task.id}`);
-                            }}
-                          >
-                            View Details
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     </motion.div>

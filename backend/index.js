@@ -10,7 +10,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:8081", // Frontend is running on port 8081
+    origin: "http://localhost:8080", // Frontend is running on port 8080
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
@@ -25,6 +25,7 @@ app.use(cookieParser()); // Add cookie parser middleware
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/staff", require("./routes/staff"));
 app.use("/api/dpt", require("./routes/department"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 // Error handling middleware
 app.use(errorHandler);
@@ -35,7 +36,7 @@ app.get("/", (req, res) => {
 });
 
 // Server setup
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8081;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

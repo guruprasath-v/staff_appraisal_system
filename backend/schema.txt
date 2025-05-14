@@ -37,3 +37,10 @@ Tables:
              efficiency | decimal(5, 2) | default=0.00
              due_date | date | default=null
              department_id | varchar(200) FK-> departments(id) | default=null
+
+- notifications: id | varchar(200) | PK | NN
+                user_id | varchar(100) | FK->users(id) | NN
+                message | text | NN
+                type | varchar(50) | NN
+                read | boolean | default=false
+                created_at | timestamp | default=CURRENT_TIMESTAMP
