@@ -485,6 +485,69 @@ const TaskDetails = () => {
             </Table>
           </motion.div>
         )}
+
+        <FormField
+          control={form.control}
+          name="assigned_employees"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assign Staff</FormLabel>
+              <FormControl>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-full justify-between"
+                    >
+                      {field.value.length > 0
+                        ? `${field.value.length} staff selected`
+                        : "Select staff..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search staff..." />
+                      <CommandEmpty>No staff found.</CommandEmpty>
+                      <CommandGroup>
+                        {departmentStaff.map((staff: any) => (
+                          <CommandItem
+                            key={staff.id}
+                            onSelect={() => {
+                              const currentValue = field.value || [];
+                              const newValue = currentValue.includes(staff.id)
+                                ? currentValue.filter((id: string) => id !== staff.id)
+                                : [...currentValue, staff.id];
+                              field.onChange(newValue);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                field.value?.includes(staff.id)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <div className="flex justify-between items-center w-full">
+                              <span>{staff.name}</span>
+                              <Badge variant="secondary" className="ml-2">
+                                {staff.pending_tasks} pending tasks
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </motion.div>
     </DashboardLayout>
   );

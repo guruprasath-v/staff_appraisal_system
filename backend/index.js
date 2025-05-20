@@ -25,7 +25,6 @@ app.use(cookieParser()); // Add cookie parser middleware
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/staff", require("./routes/staff"));
 app.use("/api/dpt", require("./routes/department"));
-app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 // Error handling middleware
 app.use(errorHandler);

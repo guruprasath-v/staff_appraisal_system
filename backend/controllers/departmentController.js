@@ -2,8 +2,7 @@ const Task = require("../models/taskModel");
 const { formatDateToMySQL } = require("../utils/dateUtils");
 const Subtask = require("../models/subtaskModel");
 const User = require("../models/userModel");
-const db = require("../configs/db");
-const Notification = require("../models/notificationModel");
+const db = require("../db");
 
 const createTask = async (req, res, next) => {
   try {
@@ -28,13 +27,6 @@ const createTask = async (req, res, next) => {
       description,
       due_date: formattedDueDate,
       department_id,
-    });
-
-    // Create notification for HOD
-    await Notification.create({
-      userId: req.user.id, // Assuming req.user is set by auth middleware
-      message: `New task created: ${name}`,
-      type: "task_created"
     });
 
     res.status(201).json({

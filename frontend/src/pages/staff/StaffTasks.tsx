@@ -98,6 +98,12 @@ const StaffTasks = () => {
   };
 
   const openCompletionDialog = (taskId: string, taskName: string) => {
+    // Find the task to check its status
+    const task = tasks.find(t => t.id === taskId);
+    if (task?.status.toLowerCase() === 'completed') {
+      return; // Don't open dialog for completed tasks
+    }
+    
     setTaskCompletionDialog({
       open: true,
       taskId,
@@ -280,8 +286,14 @@ const StaffTasks = () => {
                   {(statusTasks as any[]).map((task) => (
                     <motion.div key={task.id} variants={item}>
                       <Card
-                        className="overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                        onClick={() => openCompletionDialog(task.id, task.name)}
+                        className={`overflow-hidden hover:shadow-md transition-shadow duration-200 ${
+                          status === "completed" ? "" : "cursor-pointer"
+                        }`}
+                        onClick={() => {
+                          if (status !== "completed") {
+                            openCompletionDialog(task.id, task.name);
+                          }
+                        }}
                       >
                         <CardHeader
                           className={`${
@@ -325,21 +337,25 @@ const StaffTasks = () => {
                             />
                           </div>
                         </CardContent>
-                        {(status === "in progress" ||
-                          status === "inprogress" ||
-                          status === "rework") && (
+                        {status === "completed" ? (
                           <CardFooter className="pt-0">
-                            <Button
-                              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent card click event
-                                openCompletionDialog(task.id, task.name);
-                              }}
-                              disabled={submittingTaskId === task.id}
-                            >
-                              {submittingTaskId === task.id ? (
-                                <div className="flex items-center">
-                                  <span className="animate-spin mr-2">
+                            <Badge className="w-full bg-green-100 text-green-800 border-green-200 justify-center">
+                              Completed
+                            </Badge>
+                          </CardFooter>
+                        ) : (
+                          (status === "inprogress" || status === "rework") && (
+                            <CardFooter className="pt-0">
+                              <Button
+                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent card click event
+                                  openCompletionDialog(task.id, task.name);
+                                }}
+                                disabled={submittingTaskId === task.id}
+                              >
+                                {submittingTaskId === task.id ? (
+                                  <div className="flex items-center">
                                     <svg
                                       className="h-5 w-5"
                                       viewBox="0 0 24 24"
@@ -358,17 +374,17 @@ const StaffTasks = () => {
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                       ></path>
                                     </svg>
-                                  </span>
-                                  Submitting...
-                                </div>
-                              ) : (
-                                <>
-                                  <ArrowRight className="mr-2 h-4 w-4" />
-                                  Submit for Review
-                                </>
-                              )}
-                            </Button>
-                          </CardFooter>
+                                    Submitting...
+                                  </div>
+                                ) : (
+                                  <>
+                                    <ArrowRight className="mr-2 h-4 w-4" />
+                                    Submit for Review
+                                  </>
+                                )}
+                              </Button>
+                            </CardFooter>
+                          )
                         )}
                       </Card>
                     </motion.div>

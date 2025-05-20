@@ -59,6 +59,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 // Validation schema for subtask
 const createSubtaskSchema = z.object({
@@ -234,11 +235,23 @@ const AllTasks = () => {
 
   // Calculate days remaining
   const getDaysRemaining = (dueDate: string) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    if (!dueDate) return 0;
+    
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const due = new Date(dueDate);
+      due.setHours(0, 0, 0, 0);
+      
+      const diffTime = due.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return isNaN(diffDays) ? 0 : diffDays;
+    } catch (error) {
+      console.error('Error calculating days remaining:', error);
+      return 0;
+    }
   };
 
   // Get status text and icon based on progress
@@ -455,70 +468,60 @@ const AllTasks = () => {
                                       control={form.control}
                                       name="assigned_employees"
                                       render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                          <FormLabel>Assign to Staff</FormLabel>
-                                          <Popover open={open} onOpenChange={setOpen}>
-                                            <PopoverTrigger asChild>
-                                              <FormControl>
+                                        <FormItem>
+                                          <FormLabel>Assign Staff</FormLabel>
+                                          <FormControl>
+                                            <Popover open={open} onOpenChange={setOpen}>
+                                              <PopoverTrigger asChild>
                                                 <Button
                                                   variant="outline"
                                                   role="combobox"
                                                   aria-expanded={open}
-                                                  className="justify-between"
+                                                  className="w-full justify-between"
                                                 >
                                                   {field.value.length > 0
                                                     ? `${field.value.length} staff selected`
                                                     : "Select staff..."}
                                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
-                                              </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-full p-0">
-                                              <Command>
-                                                <CommandInput placeholder="Search staff..." />
-                                                <CommandEmpty>No staff found.</CommandEmpty>
-                                                <CommandGroup>
-                                                  {departmentStaff.map((staff: any) => (
-                                                    <CommandItem
-                                                      key={staff.id}
-                                                      onSelect={() => {
-                                                        const newValue = field.value.includes(staff.id)
-                                                          ? field.value.filter((id) => id !== staff.id)
-                                                          : [...field.value, staff.id];
-                                                        field.onChange(newValue);
-                                                        setSelectedEmployees(newValue);
-                                                      }}
-                                                    >
-                                                      <Check
-                                                        className={cn(
-                                                          "mr-2 h-4 w-4",
-                                                          field.value.includes(staff.id)
-                                                            ? "opacity-100"
-                                                            : "opacity-0"
-                                                        )}
-                                                      />
-                                                      {staff.name}
-                                                    </CommandItem>
-                                                  ))}
-                                                </CommandGroup>
-                                              </Command>
-                                            </PopoverContent>
-                                          </Popover>
-                                          <div className="flex flex-wrap gap-2 mt-2">
-                                            {selectedEmployees.map((employeeId) => {
-                                              const staff = departmentStaff.find((s: any) => s.id === employeeId);
-                                              return staff ? (
-                                                <Badge
-                                                  key={employeeId}
-                                                  variant="secondary"
-                                                  className="flex items-center gap-1"
-                                                >
-                                                  <Users className="h-3 w-3" />
-                                                  {staff.name}
-                                                </Badge>
-                                              ) : null;
-                                            })}
-                                          </div>
+                                              </PopoverTrigger>
+                                              <PopoverContent className="w-full p-0">
+                                                <Command>
+                                                  <CommandInput placeholder="Search staff..." />
+                                                  <CommandEmpty>No staff found.</CommandEmpty>
+                                                  <CommandGroup>
+                                                    {departmentStaff.map((staff: any) => (
+                                                      <CommandItem
+                                                        key={staff.id}
+                                                        onSelect={() => {
+                                                          const currentValue = field.value || [];
+                                                          const newValue = currentValue.includes(staff.id)
+                                                            ? currentValue.filter((id: string) => id !== staff.id)
+                                                            : [...currentValue, staff.id];
+                                                          field.onChange(newValue);
+                                                        }}
+                                                      >
+                                                        <Check
+                                                          className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            field.value?.includes(staff.id)
+                                                              ? "opacity-100"
+                                                              : "opacity-0"
+                                                          )}
+                                                        />
+                                                        <div className="flex justify-between items-center w-full">
+                                                          <span>{staff.name}</span>
+                                                          <Badge variant="secondary" className="ml-2">
+                                                            {staff.pending_tasks} pending tasks
+                                                          </Badge>
+                                                        </div>
+                                                      </CommandItem>
+                                                    ))}
+                                                  </CommandGroup>
+                                                </Command>
+                                              </PopoverContent>
+                                            </Popover>
+                                          </FormControl>
                                           <FormMessage />
                                         </FormItem>
                                       )}
@@ -584,7 +587,7 @@ const AllTasks = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/hod/task/${task.id}`)}
+                              onClick={() => navigate(`/hod/tasks/${task.id}`)}
                               className="flex items-center gap-2"
                             >
                               View Details
@@ -632,11 +635,6 @@ const AllTasks = () => {
                               style={{ width: `${task.progress}%` }}
                             ></div>
                           </div>
-                          <div className="mt-2 flex justify-between text-xs text-gray-500">
-                            <span>{task.completedSubtasks} completed</span>
-                            <span>{task.pendingSubtasks} pending</span>
-                            <span>{task.totalSubtasks} total</span>
-                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -645,59 +643,11 @@ const AllTasks = () => {
               )}
             </motion.div>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center space-x-2 mt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
+            {/* Pagination and any other content here */}
           </>
         )}
       </motion.div>
     </DashboardLayout>
-  );
-};
-
-// Badge component to show days remaining
-const Badge = ({ daysRemaining }: { daysRemaining: number }) => {
-  let color = "bg-gray-100 text-gray-800";
-
-  if (daysRemaining < 0) {
-    color = "bg-red-100 text-red-800";
-  } else if (daysRemaining <= 3) {
-    color = "bg-orange-100 text-orange-800";
-  } else if (daysRemaining <= 7) {
-    color = "bg-yellow-100 text-yellow-800";
-  } else {
-    color = "bg-green-100 text-green-800";
-  }
-
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full font-medium ${color}`}>
-      {daysRemaining < 0
-        ? `${Math.abs(daysRemaining)} days overdue`
-        : daysRemaining === 0
-        ? "Due today"
-        : `${daysRemaining} days left`}
-    </span>
   );
 };
 

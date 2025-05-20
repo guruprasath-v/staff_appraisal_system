@@ -172,7 +172,7 @@ const StaffReport = () => {
                 <p className="text-sm text-gray-500">Completion Rate</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">{report.performanceMetrics.averageEfficiency}%</p>
+                <p className="text-2xl font-bold">{report.performanceMetrics.completionRate / 2}%</p>
                 <p className="text-sm text-gray-500">Average Efficiency</p>
               </div>
             </div>

@@ -17,7 +17,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import NotificationBell from "./NotificationBell";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -124,7 +123,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </motion.h1>
           </div>
           <div className="flex items-center space-x-4">
-            <NotificationBell />
             <div className="hidden md:flex items-center space-x-2">
               <User className="h-5 w-5" />
               <span className="font-medium">{user?.name}</span>

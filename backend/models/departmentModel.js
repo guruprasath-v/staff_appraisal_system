@@ -1,4 +1,4 @@
-const db = require("../configs/db");
+const db = require("../db");
 
 class Department {
   static async incrementStaffCount(departmentId) {

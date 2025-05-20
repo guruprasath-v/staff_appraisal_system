@@ -229,41 +229,41 @@ export const updateStaffSubtaskStatus = async (subtaskId: string) => {
 };
 
 // Notification API
-export const createNotification = async (data: { userId: string; message: string; type: string }) => {
-  try {
-    const response = await api.post("/api/notifications", data);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+// export const createNotification = async (data: { userId: string; message: string; type: string }) => {
+//   try {
+//     const response = await api.post("/api/notifications", data);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
-export const getNotifications = async (userId: string) => {
-  try {
-    const response = await api.get(`/api/notifications/${userId}`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+// export const getNotifications = async (userId: string) => {
+//   try {
+//     const response = await api.get(`/api/notifications/${userId}`);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
-export const markNotificationAsRead = async (notificationId: string) => {
-  try {
-    const response = await api.put(`/api/notifications/${notificationId}/read`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+// export const markNotificationAsRead = async (notificationId: string) => {
+//   try {
+//     const response = await api.put(`/api/notifications/${notificationId}/read`);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
-export const deleteNotification = async (notificationId: string) => {
-  try {
-    const response = await api.delete(`/api/notifications/${notificationId}`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+// export const deleteNotification = async (notificationId: string) => {
+//   try {
+//     const response = await api.delete(`/api/notifications/${notificationId}`);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
 export const generateStaffReport = async (staffId: string) => {
   try {

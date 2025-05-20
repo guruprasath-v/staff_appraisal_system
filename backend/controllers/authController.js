@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
-const Notification = require("../models/notificationModel");
 
 const login = async (req, res, next) => {
   console.log("login endpoint accessed")
@@ -24,13 +23,6 @@ const login = async (req, res, next) => {
         message: "Invalid Password",
       });
     }
-
-    // Create notification for login
-    await Notification.create({
-      userId: user.id,
-      message: `You logged in at ${new Date().toLocaleString()}`,
-      type: "login"
-    });
 
     // Generate JWT token
     const token = jwt.sign(
