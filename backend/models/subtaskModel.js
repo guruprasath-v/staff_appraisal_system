@@ -1,4 +1,4 @@
-const db = require("../configs/db");
+const db = require("../db");
 const { v4: uuidv4 } = require("uuid");
 
 class Subtask {

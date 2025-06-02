@@ -1,4 +1,4 @@
-const db = require("../configs/db");
+const db = require("../db");
 const Department = require("./departmentModel");
 
 class User {
@@ -33,15 +33,34 @@ class User {
   static async createUser(userData) {
     const { name, email, mob, password, role, dpt, workload } = userData;
 
-    const [result] = await db.query(
-      "INSERT INTO users (id, name, email, mob, password, role, dpt, workload) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?)",
-      [name, email, mob, password, role, dpt, workload]
-    );
+    try {
+      // Start a transaction
+      await db.query('START TRANSACTION');
 
-    // Increment the department's staff count
-    await Department.incrementStaffCount(dpt);
+      // Insert the user
+      const [result] = await db.query(
+        "INSERT INTO users (id, name, email, mob, password, role, dpt, workload) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?)",
+        [name, email, mob || "", password, role, dpt, workload || 0]
+      );
 
-    return result;
+      // Get the inserted user's ID
+      const [[user]] = await db.query(
+        "SELECT id FROM users WHERE email = ?",
+        [email]
+      );
+
+      // Increment the department's staff count
+      await Department.incrementStaffCount(dpt);
+
+      // Commit the transaction
+      await db.query('COMMIT');
+
+      return user;
+    } catch (error) {
+      // Rollback in case of error
+      await db.query('ROLLBACK');
+      throw error;
+    }
   }
 
   static async findById(id) {

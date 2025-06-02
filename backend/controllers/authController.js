@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
 
 const login = async (req, res, next) => {
+  console.log("login endpoint accessed")
   try {
     const { email, password } = req.body;
 

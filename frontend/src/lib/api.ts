@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: "http://localhost:8080", // Backend is running on port 8080
+  baseURL: "http://localhost:8081", // Backend is running on port 8081
   withCredentials: true, // Important for cookies
   headers: {
     "Content-Type": "application/json",
@@ -25,6 +25,15 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error.response?.data || error.message);
+    return Promise.reject(error);
+  }
 );
 
 // Create common API calls
@@ -65,7 +74,15 @@ export const registerStaff = async (staffData: {
   department_id: string;
 }) => {
   try {
-    const response = await api.post("/api/staff/register", staffData);
+    const response = await api.post("/api/staff/register", {
+      name: staffData.name,
+      email: staffData.email,
+      password: staffData.password,
+      dpt: staffData.department_id,
+      role: "staff",
+      mob: "", // Optional mobile number
+      workload: 0 // Default workload
+    });
     return response.data;
   } catch (error) {
     throw error;
@@ -142,7 +159,7 @@ export const createSubtask = async (
     name: string;
     description: string;
     priority: string;
-    assigned_employee: string;
+    assigned_employees: string[];
     due_date: string;
   }
 ) => {
@@ -163,20 +180,22 @@ export const getDepartmentReviewSubtasks = async () => {
   }
 };
 
-export const updateSubtaskStatus = async (
-  subtaskId: string,
-  statusData: {
-    status: string;
-    priority?: string;
-    due_date?: string;
-    description?: string;
-    quality_of_work?: string;
-  }
-) => {
+export const getSubtaskDetails = async (subtaskId: string) => {
   try {
-    const response = await api.put(`/api/dpt/stask/${subtaskId}`, statusData);
+    const response = await api.get(`/api/subtasks/${subtaskId}`);
     return response.data;
   } catch (error) {
+    console.error("Error fetching subtask details:", error);
+    throw error;
+  }
+};
+
+export const updateSubtaskStatus = async (subtaskId: string, status: string) => {
+  try {
+    const response = await api.patch(`/api/subtasks/${subtaskId}/status`, { status });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating subtask status:", error);
     throw error;
   }
 };
@@ -205,6 +224,72 @@ export const updateStaffSubtaskStatus = async (subtaskId: string) => {
     const response = await api.put(`/api/staff/stask/${subtaskId}`);
     return response.data;
   } catch (error) {
+    throw error;
+  }
+};
+
+// Notification API
+// export const createNotification = async (data: { userId: string; message: string; type: string }) => {
+//   try {
+//     const response = await api.post("/api/notifications", data);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+// export const getNotifications = async (userId: string) => {
+//   try {
+//     const response = await api.get(`/api/notifications/${userId}`);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+// export const markNotificationAsRead = async (notificationId: string) => {
+//   try {
+//     const response = await api.put(`/api/notifications/${notificationId}/read`);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+// export const deleteNotification = async (notificationId: string) => {
+//   try {
+//     const response = await api.delete(`/api/notifications/${notificationId}`);
+//     return response.data;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+export const generateStaffReport = async (staffId: string) => {
+  try {
+    const response = await api.get(`/api/staff/report/${staffId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const generateReport = async (type: string) => {
+  try {
+    const response = await api.get(`/api/reports/${type}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error generating report:", error);
+    throw error;
+  }
+};
+
+export const getAdminStats = async () => {
+  try {
+    const response = await api.get('/api/admin/stats');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching admin stats:", error);
     throw error;
   }
 };

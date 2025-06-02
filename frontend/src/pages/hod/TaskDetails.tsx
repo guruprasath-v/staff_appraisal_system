@@ -31,6 +31,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,7 +65,17 @@ import {
   AlertCircle,
   ClipboardList,
   Users,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 // Validation schema for subtask
 const createSubtaskSchema = z.object({
@@ -71,9 +86,7 @@ const createSubtaskSchema = z.object({
     .string()
     .min(10, { message: "Description must be at least 10 characters" }),
   priority: z.string().min(1, { message: "Please select a priority" }),
-  assigned_employee: z
-    .string()
-    .min(1, { message: "Please assign an employee" }),
+  assigned_employees: z.array(z.string()).min(1, { message: "Please select at least one employee" }),
   due_date: z.string().refine(
     (date) => {
       const selectedDate = new Date(date);
@@ -109,6 +122,8 @@ const TaskDetails = () => {
     pending: 0,
     completionPercentage: 0,
   });
+  const [open, setOpen] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
   // Initialize form
   const form = useForm<CreateSubtaskFormValues>({
@@ -117,7 +132,7 @@ const TaskDetails = () => {
       name: "",
       description: "",
       priority: "",
-      assigned_employee: "",
+      assigned_employees: [],
       due_date: new Date().toISOString().split("T")[0],
     },
   });
@@ -295,174 +310,19 @@ const TaskDetails = () => {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              <Button
+                disabled={taskDetails.status === 'completed'}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Subtask
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Create New Subtask</DialogTitle>
-                <DialogDescription>
-                  Add a new subtask to "{taskDetails.name}"
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Subtask Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Implement login API" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Create a secure login API endpoint with JWT authentication..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Priority</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="low">Low</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="due_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input type="date" {...field} />
-                              <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="assigned_employee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assign To</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select assignee" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {departmentStaff.map((staff) => (
-                              <SelectItem key={staff.id} value={staff.id}>
-                                {staff.name} ({staff.pending_tasks} pending
-                                tasks)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Staff members with their current task load
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <DialogFooter className="pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isCreatingSubtask}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    >
-                      {isCreatingSubtask ? (
-                        <div className="flex items-center">
-                          <span className="animate-spin mr-2">
-                            <svg className="h-5 w-5" viewBox="0 0 24 24">
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                          </span>
-                          Creating...
-                        </div>
-                      ) : (
-                        "Create Subtask"
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
+            {taskDetails.status === 'completed' && (
+              <div className="text-sm text-red-500 mt-1">
+                Cannot add subtasks to a completed task
+              </div>
+            )}
           </Dialog>
         </div>
 
@@ -625,6 +485,69 @@ const TaskDetails = () => {
             </Table>
           </motion.div>
         )}
+
+        <FormField
+          control={form.control}
+          name="assigned_employees"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assign Staff</FormLabel>
+              <FormControl>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-full justify-between"
+                    >
+                      {field.value.length > 0
+                        ? `${field.value.length} staff selected`
+                        : "Select staff..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search staff..." />
+                      <CommandEmpty>No staff found.</CommandEmpty>
+                      <CommandGroup>
+                        {departmentStaff.map((staff: any) => (
+                          <CommandItem
+                            key={staff.id}
+                            onSelect={() => {
+                              const currentValue = field.value || [];
+                              const newValue = currentValue.includes(staff.id)
+                                ? currentValue.filter((id: string) => id !== staff.id)
+                                : [...currentValue, staff.id];
+                              field.onChange(newValue);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                field.value?.includes(staff.id)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <div className="flex justify-between items-center w-full">
+                              <span>{staff.name}</span>
+                              <Badge variant="secondary" className="ml-2">
+                                {staff.pending_tasks} pending tasks
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </motion.div>
     </DashboardLayout>
   );

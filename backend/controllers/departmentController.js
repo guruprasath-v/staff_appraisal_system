@@ -2,7 +2,8 @@ const Task = require("../models/taskModel");
 const { formatDateToMySQL } = require("../utils/dateUtils");
 const Subtask = require("../models/subtaskModel");
 const User = require("../models/userModel");
-const db = require("../configs/db");
+const db = require("../db");
+
 const createTask = async (req, res, next) => {
   try {
     const { name, description, due_date } = req.body;

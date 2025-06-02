@@ -22,6 +22,9 @@ import CreateTask from "./pages/hod/CreateTask";
 import TaskDetails from "./pages/hod/TaskDetails";
 import AllTasks from "./pages/hod/AllTasks";
 import PendingReviews from "./pages/hod/PendingReviews";
+import StaffList from "@/pages/hod/StaffList";
+import StaffReport from "@/pages/hod/StaffReport";
+import SubtaskDetails from "@/pages/hod/SubtaskDetails";
 
 // Staff Pages
 import StaffTasks from "./pages/staff/StaffTasks";
@@ -98,6 +101,30 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["hod"]}>
                   <CreateUser />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/hod/staff"
+              element={
+                <ProtectedRoute allowedRoles={["hod"]}>
+                  <StaffList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/hod/staff-report/:staffId"
+              element={
+                <ProtectedRoute allowedRoles={["hod"]}>
+                  <StaffReport />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/hod/subtask/:id"
+              element={
+                <ProtectedRoute allowedRoles={["hod"]}>
+                  <SubtaskDetails />
                 </ProtectedRoute>
               }
             />

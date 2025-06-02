@@ -61,6 +61,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           icon: <ListTodo className="mr-2 h-5 w-5" />,
         },
         {
+          name: "Staff List",
+          path: "/hod/staff",
+          icon: <Users className="mr-2 h-5 w-5" />,
+        },
+        {
           name: "Create Task",
           path: "/hod/create-task",
           icon: <Plus className="mr-2 h-5 w-5" />,
